@@ -45,6 +45,7 @@ stack".
 #poppoppoppush something
 
 #hidebc - Don't show breadcrumbs on this page.
+#nobc - Don't show breadcrumbs on this page.
 
 # The following directive is recommended to be set as early (e.g. on the first
         page) as possible.
@@ -61,8 +62,8 @@ See `breadcrumbs_test.odp` for an example.
 
 Once you finished editing, backup your document first.
 
-Then, run "Run Macro - My Macros - breadcrumbs - automatic_breadcrumbs". Enjoy
-the result.
+Then, run "Run Macro - My Macros - breadcrumbs - automatic_breadcrumbs".
+Save, and re-open the file. Enjoy the result.
 
 Press F11, see "Styles" panel. There will be 2 new drawing styles, "TOC
 (Auto-generated)" and "Breadcrumb (Auto-generated)". Adjust them to adjust

@@ -146,6 +146,7 @@ def automatic_breadcrumbs():
         top_shape = None
         top_shape_y = 999999
         toc_shape = None
+        bc_shape = None
 
         is_toc = False
         should_push_title = False
@@ -198,6 +199,8 @@ def automatic_breadcrumbs():
                 push_extra_list += push_strs
 
             elif s == "#hidebc":
+                should_hide_bc = True
+            elif s == "#nobc":
                 should_hide_bc = True
             elif s.startswith("#bcx "):
                 BREADCRUMB_X = int(s[len("#bcx "):])
