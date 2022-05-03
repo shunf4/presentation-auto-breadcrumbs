@@ -4,6 +4,8 @@ This is a Python macro supporting OpenOffice or LibreOffice Impression
 presentation documents. It automatically adds breadcrumbs and TOC and
 agenda slides, according to the directive you added in the document.
 
+![Final effect of this macro. There're auto-generated agenda slides and breadcrumbs.](assets/screenshot.png)
+
 ### Install
 
 Copy breadcrumbs.py to ["where LibreOffice save
