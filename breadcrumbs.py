@@ -153,6 +153,7 @@ def automatic_breadcrumbs():
         push_extra_list = []
         should_hide_bc = False
         pop_count = 0
+        set_bc_text = None
 
         for shape in page:
             if not shape.supportsService("com.sun.star.drawing.TextShape"):
@@ -197,11 +198,20 @@ def automatic_breadcrumbs():
                 pop_count += 3
                 push_strs = s[len("#poppoppoppush "):].split("|")
                 push_extra_list += push_strs
-
+            elif s.startswith("#poptopush "):
+                args = s[len("#poptopush "):].split(" ", 1)
+                pop_count = len(bc_stack) - int(args[0])
+                if len(args) > 1:
+                    push_strs = args[1].split("|")
+                    push_extra_list += push_strs
+                else:
+                    should_push_title = True
             elif s == "#hidebc":
                 should_hide_bc = True
             elif s == "#nobc":
                 should_hide_bc = True
+            elif s.startswith("#bc "):
+                set_bc_text = s[len("#bc "):]
             elif s.startswith("#bcx "):
                 BREADCRUMB_X = int(s[len("#bcx "):])
             elif s.startswith("#bcy "):
@@ -253,15 +263,24 @@ def automatic_breadcrumbs():
             if bc_shape is not None:
                 page.remove(bc_shape)
         else:
-            if len(bc_stack) > 0:
+            final_bc_text = None
+            if set_bc_text is not None:
+                final_bc_text = set_bc_text
+            elif len(bc_stack) > 0:
+                final_bc_text = BREADCRUMB_DELIMITER.join(bc_stack)
+                
+            if final_bc_text is not None:
                 if bc_shape is None:
                     bc_shape = doc.createInstance("com.sun.star.drawing.TextShape")
                     page.add(bc_shape)
                 bc_shape.TextAutoGrowHeight = True
                 bc_shape.TextAutoGrowWidth = True
-                bc_shape.setString(BREADCRUMB_DELIMITER.join(bc_stack))
+                bc_shape.setString(final_bc_text)
                 bc_shape.setPosition(Point(BREADCRUMB_X, BREADCRUMB_Y))
                 bc_shape.Style = bc_graph_style
+            else:
+                if bc_shape is not None:
+                    page.remove(bc_shape)
 
         if is_toc:
             toc_list_stack[-1].shape = toc_shape
