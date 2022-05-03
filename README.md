@@ -1,8 +1,8 @@
 ## Automatically Add Breadcrumbs and TOC 
 
 This is a Python macro supporting OpenOffice or LibreOffice Impression
-presentation documents. It automatically adds breadcrumbs and TOC according to
-the directive you added in the document.
+presentation documents. It automatically adds breadcrumbs and TOC and
+agenda slides, according to the directive you added in the document.
 
 ### Install
 
@@ -10,6 +10,9 @@ Copy breadcrumbs.py to ["where LibreOffice save
 macros"](https://wiki.documentfoundation.org/Macros/Python_Guide/Introduction#Where_save_macros.3F).
 
 ### Usage
+
+It's recommended to first convert .pptx to .odp using LibreOffice first,
+if you are working on .pptx files.
 
 First, add directives to pages. Directives are little text boxes containing
 text with special format. Drag these text boxes outside of visible area of
@@ -27,7 +30,7 @@ stack".
 #toc - The text shape with the biggest area in this page will be filled with
         TOC. If currently "content hierarchy stack" is not empty, lines in TOC
         will be set to inactive color, except for the line that matches current
-        stack, which is set to active color.
+        stack, which is set to active color. (Agenda slide)
 
 #push - Push current title (The text shape that is nearest to the top side of
         this page, except breadcrumbs) into content hierarchy stack.
@@ -52,6 +55,14 @@ stack".
 #nobc - Don't show breadcrumbs on this page.
 #bc something - Show "something" instead of the auto-generated content as
         breadcrumbs on this page.
+#bcfull - Show full breadcrumbs (By default, current title is omitted).
+#bctail - Show a tailing delimiter at the end of breadcrumbs.
+#root Root Title - Set root title as "Root Title".
+#bcroot - Show root title in breadcrumbs.
+
+#tocexpand - Expand all chapters in root TOC and agenda slides.
+#tocrootexpand - Expand all chapters in root TOC (in which no chapter is
+        highlighted, contrary to agenda slides).
 
 # The following directive is recommended to be set as early (e.g. on the first
         page) as possible.
@@ -61,9 +72,9 @@ stack".
 #nodelimit - Do not use a delimiter between breadcrumb elements.
 #delimit ( > ) - Use " > " as a delimiter between breadcrumb elements.
 #toccolora 111111 - Use "#111111" as the color of currently active title in
-        TOC.
+        agenda slides.
 #toccolorina CFCFCF - Use "#CFCFCF" as the color of currently inactive title in
-        TOC.
+        agenda slides.
 ```
 
 See `breadcrumbs_test.odp` for an example.
@@ -73,11 +84,9 @@ Once you finished editing, backup your document first.
 Then, run "Run Macro - My Macros - breadcrumbs - automatic_breadcrumbs".
 Save, and re-open the file. Enjoy the result.
 
-Press F11, see "Styles" panel. There will be 2 new drawing styles, "TOC
-(Auto-generated)" and "Breadcrumb (Auto-generated)". Adjust them to adjust
-styles of all TOCs and breadcrumbs. Editing text color in "TOC (Auto-generated)"
-won't work, for the text color of TOC seems to comply with "Outline X"
-presentation styles.
+Press F11, see "Styles" panel. There will be a new drawing style,
+"Breadcrumb (Auto-generated)". Adjust it to adjust styles of all
+breadcrumbs.
 
 If you made some change to the content hierarchy of the document, just adjust
 the directives, backup the document, and run the macro again. TOCs and

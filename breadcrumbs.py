@@ -16,11 +16,23 @@ TOC_STYLE_NAME = "TOC (Auto-generated)"
 TOC_COLOR_INACTIVE = "CFCFCF"
 # toccolora
 TOC_COLOR_ACTIVE = "111111"
+# tocexpand
+SHOULD_EXPAND_ALL_IN_TOC = False
+# tocrootexpand
+SHOULD_EXPAND_ALL_IN_ROOT_TOC = False
+# bcfull
+SHOULD_SHOW_FULL_BREADCRUMBS = False
+# bctail
+SHOULD_SHOW_TAIL_DELIMITER = False
+# root
+ROOT_TITLE = "<Root>"
+# bcroot
+SHOULD_SHOW_ROOT_IN_BREADCRUMBS = False
 
 class TocEntry(object):
     def __init__(self, text):
         self.text = text
-        self.shape = None
+        self.shapes = []
         self.children = []
 
     def __str__(self):
@@ -44,10 +56,11 @@ class IsFirstLine(object):
     def __bool__(self):
         return self.value
 
-def do_recurse_write_toc_tree(depth: int, is_first_line: IsFirstLine, will_stress: bool, toc_root: TocEntry, curr_toc_entry: TocEntry, target_toc_entry: TocEntry):
+def do_recurse_write_toc_tree(depth: int, is_first_line: IsFirstLine, will_stress: bool, toc_root: TocEntry, curr_toc_entry_trace: typing.List[TocEntry], curr_toc_entry: TocEntry, target_toc_entry_trace: typing.List[TocEntry], target_toc_entry: TocEntry):
     if curr_toc_entry is not toc_root:
         if not is_first_line:
-            target_toc_entry.shape.finishParagraph([])
+            for shape in target_toc_entry.shapes:
+                shape.finishParagraph([])
         else:
             is_first_line.set_value(False)
 
@@ -62,31 +75,47 @@ def do_recurse_write_toc_tree(depth: int, is_first_line: IsFirstLine, will_stres
                 if TOC_COLOR_INACTIVE is not None and TOC_COLOR_INACTIVE != "":
                     para_props.append(PropertyValue(Name = "CharColor", Value = int(TOC_COLOR_INACTIVE, 16)))
                 
-        target_toc_entry.shape.appendTextPortion(curr_toc_entry.text, para_props)
+        for shape in target_toc_entry.shapes:
+            shape.appendTextPortion(curr_toc_entry.text, para_props)
 
-    for child_entry in curr_toc_entry.children:
-        do_recurse_write_toc_tree(depth + 1, is_first_line, will_stress, toc_root, child_entry, target_toc_entry)
+    should_expand = False
+    if SHOULD_EXPAND_ALL_IN_TOC:
+        should_expand = True
+    else:
+        if SHOULD_EXPAND_ALL_IN_ROOT_TOC and target_toc_entry is toc_root:
+            should_expand = True
+        elif depth == 0:
+            should_expand = True
+        elif target_toc_entry is toc_root:
+            should_expand = False
+        elif curr_toc_entry in target_toc_entry_trace or target_toc_entry in curr_toc_entry_trace:
+            should_expand = True
 
-def recurse_write_toc_tree(toc_root: TocEntry, target_toc_entry: TocEntry):
-    if target_toc_entry.shape is None:
+    if should_expand:
+        for child_entry in curr_toc_entry.children:
+            do_recurse_write_toc_tree(depth + 1, is_first_line, will_stress, toc_root, curr_toc_entry_trace + [child_entry], child_entry, target_toc_entry_trace, target_toc_entry)
+
+def recurse_write_toc_tree(toc_root: TocEntry, target_toc_entry_trace: typing.List[TocEntry], target_toc_entry: TocEntry):
+    if len(target_toc_entry.shapes) == 0:
         return
         
-    target_toc_entry.shape.setString("")
-    do_recurse_write_toc_tree(0, IsFirstLine(True), target_toc_entry is not toc_root, toc_root, toc_root, target_toc_entry)
+    for shape in target_toc_entry.shapes:
+        shape.setString("")
+    do_recurse_write_toc_tree(0, IsFirstLine(True), target_toc_entry is not toc_root, toc_root, [toc_root], toc_root, target_toc_entry_trace, target_toc_entry)
 
 
-def do_recurse_toc_entry(depth: int, toc_root: TocEntry, curr_toc_entry: TocEntry):
+def do_recurse_toc_entry(depth: int, trace: typing.List[TocEntry], toc_root: TocEntry, curr_toc_entry: TocEntry):
     print(("  " * depth) + curr_toc_entry.text, end='')
-    if curr_toc_entry.shape is not None:
-        recurse_write_toc_tree(toc_root, curr_toc_entry)
+    if len(curr_toc_entry.shapes) > 0:
+        recurse_write_toc_tree(toc_root, trace, curr_toc_entry)
         print(" (has TOC shape, written)", end='')
     print("")
 
     for child_entry in curr_toc_entry.children:
-        do_recurse_toc_entry(depth + 1, toc_root, child_entry)
+        do_recurse_toc_entry(depth + 1, trace + [child_entry], toc_root, child_entry)
 
 def recurse_toc_entry(toc_root: TocEntry):
-    do_recurse_toc_entry(0, toc_root, toc_root)
+    do_recurse_toc_entry(0, [toc_root], toc_root, toc_root)
 
 def automatic_breadcrumbs():
     global BREADCRUMB_X
@@ -96,6 +125,12 @@ def automatic_breadcrumbs():
     global TOC_STYLE_NAME
     global TOC_COLOR_INACTIVE
     global TOC_COLOR_ACTIVE
+    global SHOULD_EXPAND_ALL_IN_TOC
+    global SHOULD_EXPAND_ALL_IN_ROOT_TOC
+    global SHOULD_SHOW_FULL_BREADCRUMBS
+    global SHOULD_SHOW_TAIL_DELIMITER
+    global ROOT_TITLE
+    global SHOULD_SHOW_ROOT_IN_BREADCRUMBS
 
     doc = XSCRIPTCONTEXT.getDocument()
     ctx = XSCRIPTCONTEXT.getComponentContext()
@@ -107,11 +142,15 @@ def automatic_breadcrumbs():
     tha_dict = {name: value for name, value in zip(tha_enum.getEnumNames(), tha_enum.getEnumValues())}
     tva_enum = tdm.getByHierarchicalName("com.sun.star.drawing.TextVerticalAdjust")
     tva_dict = {name: value for name, value in zip(tva_enum.getEnumNames(), tva_enum.getEnumValues())}
+    fst_enum = tdm.getByHierarchicalName("com.sun.star.drawing.FillStyle")
+    fst_dict = {name: value for name, value in zip(fst_enum.getEnumNames(), fst_enum.getEnumValues())}
+    lst_enum = tdm.getByHierarchicalName("com.sun.star.drawing.LineStyle")
+    lst_dict = {name: value for name, value in zip(lst_enum.getEnumNames(), lst_enum.getEnumValues())}
 
     # breadcrumbs stack
     bc_stack = []
 
-    toc_root = TocEntry("<Root>")
+    toc_root = TocEntry(ROOT_TITLE)
     toc_list_stack: typing.List[TocEntry] = []
     toc_list_stack.append(toc_root)
 
@@ -126,13 +165,16 @@ def automatic_breadcrumbs():
         bc_graph_style.setParentStyle("standard")
         bc_graph_style.TextHorizontalAdjust = tha_dict["LEFT"]
         bc_graph_style.TextVerticalAdjust = tva_dict["TOP"]
+        bc_graph_style.FillStyle = fst_dict["NONE"]
+        bc_graph_style.LineStyle = lst_dict["NONE"]
 
-    if graph_styles.hasByName(TOC_STYLE_NAME):
-        toc_graph_style = graph_styles.getByName(TOC_STYLE_NAME)
-    else:
-        toc_graph_style = graph_styles.createInstance()
-        graph_styles.insertByName(TOC_STYLE_NAME, toc_graph_style)
-        toc_graph_style.setParentStyle("standard")
+    # Adding styles to TOC breaks AutoLayouts
+    # if graph_styles.hasByName(TOC_STYLE_NAME):
+    #     toc_graph_style = graph_styles.getByName(TOC_STYLE_NAME)
+    # else:
+    #     toc_graph_style = graph_styles.createInstance()
+    #     graph_styles.insertByName(TOC_STYLE_NAME, toc_graph_style)
+    #     toc_graph_style.setParentStyle("standard")
         
 
     for page in pages:
@@ -156,7 +198,10 @@ def automatic_breadcrumbs():
         set_bc_text = None
 
         for shape in page:
-            if not shape.supportsService("com.sun.star.drawing.TextShape"):
+            if not shape.supportsService("com.sun.star.drawing.Text"):
+                continue
+
+            if not shape.supportsService("com.sun.star.drawing.Shape"):
                 continue
 
             s: str = shape.getString()
@@ -220,12 +265,25 @@ def automatic_breadcrumbs():
                 BREADCRUMB_DELIMITER = ""
             elif s.startswith("#delimit ("):
                 BREADCRUMB_DELIMITER = s[len("#delimit ("):-1]
+            elif s == "#tocexpand":
+                SHOULD_EXPAND_ALL_IN_TOC = True
+            elif s == "#tocrootexpand":
+                SHOULD_EXPAND_ALL_IN_ROOT_TOC = True
             elif s.startswith("#toccolora "):
                 TOC_COLOR_ACTIVE = s[len("#toccolora "):]
             elif s.startswith("#toccolorina "):
                 TOC_COLOR_INACTIVE = s[len("#toccolorina "):]
-            elif shape.Style.Name == TOC_STYLE_NAME:
-                toc_shape = shape
+            elif s == "#bcfull":
+                SHOULD_SHOW_FULL_BREADCRUMBS = True
+            elif s == "#bctail":
+                SHOULD_SHOW_TAIL_DELIMITER = True
+            elif s == "#bcroot":
+                SHOULD_SHOW_ROOT_IN_BREADCRUMBS = True
+            elif s.startswith("#root "):
+                ROOT_TITLE = s[len("#root "):]
+                toc_root.text = ROOT_TITLE
+            # elif shape.Style.Name == TOC_STYLE_NAME:
+            #     toc_shape = shape
             elif shape.Style.Name == BREADCRUMB_STYLE_NAME:
                 bc_shape = shape
             else:
@@ -266,8 +324,19 @@ def automatic_breadcrumbs():
             final_bc_text = None
             if set_bc_text is not None:
                 final_bc_text = set_bc_text
-            elif len(bc_stack) > 0:
-                final_bc_text = BREADCRUMB_DELIMITER.join(bc_stack)
+            else:
+                if SHOULD_SHOW_FULL_BREADCRUMBS:
+                    showing_bc_stack = bc_stack
+                else:
+                    showing_bc_stack = bc_stack[:-1]
+
+                if SHOULD_SHOW_ROOT_IN_BREADCRUMBS and len(showing_bc_stack) > 0:
+                    showing_bc_stack = [toc_root.text] + showing_bc_stack
+
+                if len(showing_bc_stack) > 0:
+                    final_bc_text = BREADCRUMB_DELIMITER.join(showing_bc_stack)
+                    if SHOULD_SHOW_TAIL_DELIMITER:
+                        final_bc_text += BREADCRUMB_DELIMITER
                 
             if final_bc_text is not None:
                 if bc_shape is None:
@@ -283,9 +352,10 @@ def automatic_breadcrumbs():
                     page.remove(bc_shape)
 
         if is_toc:
-            toc_list_stack[-1].shape = toc_shape
+            toc_list_stack[-1].shapes.append(toc_shape)
             toc_shape.setString("<TOC>")
-            toc_shape.Style = toc_graph_style
+            # Adding styles to TOC breaks AutoLayouts
+            # toc_shape.Style = toc_graph_style
 
     recurse_toc_entry(toc_root)
 
