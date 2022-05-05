@@ -68,7 +68,7 @@ def do_recurse_write_toc_tree(depth: int, is_first_line: IsFirstLine, will_stres
             PropertyValue(Name = "NumberingLevel", Value = depth - 1)
         ]
         if will_stress:
-            if curr_toc_entry is target_toc_entry:
+            if curr_toc_entry is target_toc_entry or curr_toc_entry in target_toc_entry.children:
                 if TOC_COLOR_ACTIVE is not None and TOC_COLOR_ACTIVE != "":
                     para_props.append(PropertyValue(Name = "CharColor", Value = int(TOC_COLOR_ACTIVE, 16)))
             else:
@@ -88,7 +88,7 @@ def do_recurse_write_toc_tree(depth: int, is_first_line: IsFirstLine, will_stres
             should_expand = True
         elif target_toc_entry is toc_root:
             should_expand = False
-        elif curr_toc_entry in target_toc_entry_trace or target_toc_entry in curr_toc_entry_trace:
+        elif curr_toc_entry in target_toc_entry_trace or curr_toc_entry is target_toc_entry:
             should_expand = True
 
     if should_expand:
